@@ -1,3 +1,4 @@
+from math import ceil
 def read(string):
     f = open(string, "r")
     byte = []
@@ -11,23 +12,27 @@ def read(string):
 
     return byte
 
-def interpret(byte):
+def info(byte):
 
     fatType = ""
 
     #JmpBoot
+    jmpBoot = ""
     if (byte[0] == "eb" or byte[0]=="EB") and byte[2]=="90":
-        print("jmpBoot[0] = 0xEB, jmpBoot[1] = 0x??, jmpBoot[2] = 0x90")
+        jmpBoot = ("jmpBoot[0] = 0xEB, jmpBoot[1] = 0x"+ (byte[1]).upper()+ ", jmpBoot[2] = 0x90")
+        print(jmpBoot)
     elif byte[0] == "e9" or byte[0]=="E9":
-        print("jmpBoot[0] = 0xE9, jmpBoot[1] = 0x??, jmpBoot[2] = 0x??")
+        jmpBoot = "jmpBoot[0] = 0xE9, jmpBoot[1] = 0x"+ byte[1].upper() +", jmpBoot[2] = 0x" + byte[2].upper()
+        print(jmpBoot)
     else:
-        print("ERROR: JmpBoot does not match")
+        jmpBoot = "ERROR: JmpBoot does not match"
+        print(jmpBoot)
         return 1
     
     #OEMName
-    name = "".join(byte[3:11])
-    name = bytes.fromhex(name).decode('utf-8')
-    print(name)
+    oemName = "".join(byte[3:11])
+    oemName = bytes.fromhex(oemName).decode('utf-8')
+    print("OEMName",oemName)
 
     #BytesPerSec
     msb = byte[12] 
@@ -35,10 +40,23 @@ def interpret(byte):
     bytesPerSec = msb + lsb
     bytesPerSec = int(bytesPerSec,16)
     print("BytesPerSec",bytesPerSec)
+    if (bytesPerSec not in [512,1024,2048,4096]):
+        print("ERROR: bytesPerSec is not 512 or 1024 or 2048 or 4096")
+        return 1
 
-    #BytesPerCluster
-    BytesPerCluster = int(byte[13],16)
-    print("BytesPerCluster",BytesPerCluster)
+    #SecPerClus
+    SecPerClus = int(byte[13],16)
+    print("SecPerClus",SecPerClus)
+    if SecPerClus not in [1, 2, 4, 8, 16, 32, 64, 128]:
+        print("ERROR: SecPerClus is not 1 or 2 or 4 or 8 or 16 or 64 or 128")
+        return 1
+    
+    '''
+    PREGUNTAR
+    if BytesPerCluster * bytesPerSec > (32 * 1024):
+        print("ERROR: BytesPerCluster is greater than 32 K")
+        return 1
+    '''
 
     #RsvdSecCnt 
     msbr = byte[15]
@@ -107,15 +125,154 @@ def interpret(byte):
         print("ERROR: This is a FAT32 and totSec32 is 0")
         return 1
     
+    fatSz32 = 0
+    if fatType == "FAT32":
+        #fatSz32
+        fatSz32 = "".join(reversed(byte[36:40]))
+        fatSz32 = int(fatSz32,16)
+        print("FatSz32", fatSz32)
+        if (fatSz32 != 0 and fatSz16!=0):
+            print("ERROR: both fatSz32 and fatSz16 are not zero")
+            return 1
+    
+    return jmpBoot, oemName, bytesPerSec , SecPerClus, rsvdSecCnt, numFAT, rootEntCnt, totalSec16, media, fatSz16, secPerTrk, numHeads, hiddSec, totSec32, fatSz32
 
+def structureFAT32(byte):
+
+    #ExtFlags
+    extFlags = "".join(byte[40:42])
+    print("ExtFlags",extFlags)
+
+    #FSVer
+    fsVer = "".join(byte[42:44])
+    print("FSVer",fsVer)
+
+    #RootClus
+    rootClus = "".join(reversed(byte[44:48]))
+    rootClus = int(rootClus,16)
+    print("RootClus",rootClus)
+
+    #file *dmg
+
+    #FSInfo
+    fsInfo = "".join(reversed(byte[48:50]))
+    fsInfo = int(fsInfo,16)
+    print("fsInfo",fsInfo)
+
+    #BkBootSec
+    bkBootSec = "".join(reversed(byte[50:52]))
+    bkBootSec = int(bkBootSec,16)
+    print("BkBootSec",bkBootSec)
+
+    #Reserved
+    reserved =  "".join(reversed(byte[52:64]))
+    reserved = int(reserved,16)
+    print("Reserved",reserved)
+
+    #DrvNum
+    drvNum= byte[64]
+    print("drvNum",drvNum)
+
+    #Reserved1
+    reserved1 = int(byte[65],16)
+    print("Reserved1",reserved1)
+
+    #BootSig
+    bootSig = byte[66]
+    print("BootSig",bootSig)
+
+    #VolID
+    volID = "".join(byte[67:71])
+    print("VolID", volID)
+
+    #volLab
+    volLab = "".join(byte[71:82])
+    print("VolLab", volLab)
+
+    #FilSysType
+    fileSysType = "".join(byte[82:90])
+    fileSysType = bytes.fromhex(fileSysType).decode('utf-8')
+    print("fileSysType", fileSysType)
 
     
 
+    return extFlags, fsVer, rootClus, fsInfo, bkBootSec, reserved, drvNum, reserved1, bootSig, volID, volLab, fileSysType
+
+def structureFAT16(byte):
+    #drvNum
+    drvNum = byte[36]
+    print("drvNum", drvNum)
+
+    #reserved1
+    reserved1 = int(byte[37],16)
+    print("reserved1",reserved1)
+    if reserved1 != 0:
+        print("WARNING: reserved1 is different than 0")
     
+    #bootSig
+    bootSig = byte[38]
+    print("bootSig",bootSig)
+
+    #volID
+    volID = "".join(byte[39:43])
+    print("VolID", volID)
+
+    #volLab
+    volLab = "".join(byte[43:54])
+    print("VolLab", volLab)
+
+    #FilSysType
+    fileSysType = "".join(byte[54:62])
+    fileSysType = bytes.fromhex(fileSysType).decode('utf-8')
+    print("fileSysType", fileSysType)
+
+    return drvNum, reserved1, bootSig, volID, volLab, fileSysType
+
+def root(rootEntCnt, bytesPerSec,fatSz16,fatSz32,rsvdSecCnt, numFAT,totalSec16, totSec32,secPerClus,byte):
+    rootDirSectors = ceil(((rootEntCnt * 32 ) + (bytesPerSec - 1))/bytesPerSec)
+    print("RootDirSectors", rootDirSectors)
+    if fatSz16 != 0:
+        fatSz = fatSz16
+    else:
+        fatSz = fatSz32
+
+    if totalSec16 != 0:
+        totSec = totalSec16
+    else:
+        totSec = totSec32
+    
+    
+    firstDataSector = rsvdSecCnt + (numFAT * fatSz) + rootDirSectors
+    dataSec = totSec - (rsvdSecCnt + (numFAT * fatSz ) + rootDirSectors)
+    countClusters = int(dataSec // secPerClus)
+    typeFAT = ""
+
+    if countClusters < 4085:
+        typeFAT = "FAT12"
+    elif countClusters < 65525:
+        typeFAT = "FAT16"
+    else:
+        typeFAT = "FAT32"
+    print(typeFAT)
+
+    if typeFAT == "FAT12" or typeFAT == "FAT16":
+        firstRootDirSecNum = rsvdSecCnt + (numFAT * fatSz)
+    print("len",len(byte))
+    print("Computation", rsvdSecCnt * bytesPerSec + (numFAT * fatSz32 * bytesPerSec))
 
 def main():
-    byte = read("fatSmall.txt")
-    interpret(byte)
+    byte = read("fat32.txt")
+    print(byte[0:50])
+
+    jmpBoot, oemName, bytesPerSec , SecPerClus, rsvdSecCnt, numFAT, rootEntCnt, totalSec16, media, fatSz16, secPerTrk, numHeads, hiddSec, totSec32, fatSz32 = info(byte)
+    
+    if fatSz32 != 0:
+       extFlags, fsVer, rootClus, fsInfo, bkBootSec, reserved, drvNum, reserved1, bootSig, volID, volLab, fileSysType = structureFAT32(byte)
+    else:
+        drvNum, reserved1, bootSig, volID, volLab, fileSysType = structureFAT16(byte)
+
+    root(rootEntCnt, bytesPerSec,fatSz16, fatSz32,rsvdSecCnt, numFAT,totalSec16,totSec32,SecPerClus,byte)
+
 
 
 main()
