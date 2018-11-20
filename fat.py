@@ -1,14 +1,19 @@
 from math import ceil
 def read(string):
-    f = open(string, "r")
-    byte = []
+    f = open(string,"r")
+    byte = {}
     for line in f.readlines():
-        line = line[8:]
-        if line == "": continue  
         line = line.replace("\n","")
         line = line.strip(" ")
         lista= line.split(" ")
-        byte = byte + lista
+        if lista[0] == "*": continue
+        
+        pos = int(lista[0],16)
+        # ['0000000', 'eb', '58', '90', '42', '53', '44', '20', '20', '34', '2e', '34', '00', '02', '08', '20', '00'
+   
+        for i in range(0,len(lista)-1):
+            byte[pos]=lista[i+1]
+            pos+=1
 
     return byte
 
@@ -30,7 +35,9 @@ def info(byte):
         return 1
     
     #OEMName
-    oemName = "".join(byte[3:11])
+    oemName = ""
+    for i in range(3,11):
+        oemName += byte[i]
     oemName = bytes.fromhex(oemName).decode('utf-8')
     print("OEMName",oemName)
 
@@ -127,8 +134,10 @@ def info(byte):
     
     fatSz32 = 0
     if fatType == "FAT32":
-        #fatSz32
-        fatSz32 = "".join(reversed(byte[36:40]))
+        fatSz32 = ""
+        for i in range(39,35,-1):
+            fatSz32 += byte[i]
+
         fatSz32 = int(fatSz32,16)
         print("FatSz32", fatSz32)
         if (fatSz32 != 0 and fatSz16!=0):
@@ -140,32 +149,46 @@ def info(byte):
 def structureFAT32(byte):
 
     #ExtFlags
-    extFlags = "".join(byte[40:42])
+    extFlags = ""
+    for i in range(40,42):
+        extFlags += byte[i]
     print("ExtFlags",extFlags)
 
     #FSVer
-    fsVer = "".join(byte[42:44])
+    fsVer = ""
+    for i in range(42,44):
+        fsVer += byte[i]
     print("FSVer",fsVer)
 
     #RootClus
-    rootClus = "".join(reversed(byte[44:48]))
+    rootClus = ""
+    for i in range(47,43,-1):
+        rootClus += byte[i]
     rootClus = int(rootClus,16)
     print("RootClus",rootClus)
 
     #file *dmg
 
     #FSInfo
-    fsInfo = "".join(reversed(byte[48:50]))
+    fsInfo = ""
+    for i in range(49,47,-1):
+         fsInfo += byte[i]
+
     fsInfo = int(fsInfo,16)
     print("fsInfo",fsInfo)
 
     #BkBootSec
-    bkBootSec = "".join(reversed(byte[50:52]))
+    bkBootSec = ""
+    for i in range(51,49,-1):
+         bkBootSec += byte[i]
+
     bkBootSec = int(bkBootSec,16)
     print("BkBootSec",bkBootSec)
 
     #Reserved
-    reserved =  "".join(reversed(byte[52:64]))
+    reserved = ""
+    for i in range(63,51,-1):
+        reserved += byte[i]
     reserved = int(reserved,16)
     print("Reserved",reserved)
 
@@ -182,19 +205,24 @@ def structureFAT32(byte):
     print("BootSig",bootSig)
 
     #VolID
-    volID = "".join(byte[67:71])
+    volID = ""
+    for i in range(67,71):
+        volID += byte[i]
     print("VolID", volID)
 
     #volLab
-    volLab = "".join(byte[71:82])
+    #volLab = "".join(byte[71:82])
+    volLab = ""
+    for i in range(71,82):
+        volLab += byte[i]
     print("VolLab", volLab)
 
     #FilSysType
-    fileSysType = "".join(byte[82:90])
+    fileSysType = ""
+    for i in range(82,90):
+        fileSysType += byte[i]
     fileSysType = bytes.fromhex(fileSysType).decode('utf-8')
     print("fileSysType", fileSysType)
-
-    
 
     return extFlags, fsVer, rootClus, fsInfo, bkBootSec, reserved, drvNum, reserved1, bootSig, volID, volLab, fileSysType
 
@@ -258,11 +286,12 @@ def root(rootEntCnt, bytesPerSec,fatSz16,fatSz32,rsvdSecCnt, numFAT,totalSec16, 
     if typeFAT == "FAT12" or typeFAT == "FAT16":
         firstRootDirSecNum = rsvdSecCnt + (numFAT * fatSz)
     print("len",len(byte))
+    print("Computation", byte[rsvdSecCnt * bytesPerSec + (numFAT * fatSz32 * bytesPerSec)])
     print("Computation", rsvdSecCnt * bytesPerSec + (numFAT * fatSz32 * bytesPerSec))
-
+    
 def main():
     byte = read("fat32.txt")
-    print(byte[0:50])
+    print(byte)
 
     jmpBoot, oemName, bytesPerSec , SecPerClus, rsvdSecCnt, numFAT, rootEntCnt, totalSec16, media, fatSz16, secPerTrk, numHeads, hiddSec, totSec32, fatSz32 = info(byte)
     
