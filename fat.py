@@ -360,8 +360,11 @@ def shortEntry(byte,computation,isLong):
     attrDict = {1: "readOnly", 2: "hidden", 4: "system", 8: "volumeID", 10: "Directory", 20: "Archive"}
     attrList = []
     try:
-        if attr == "0f":
+        if attr == "0f" and isLong==1:
             print("attribute: LongName")
+        elif attr == "0f" and isLong==0:
+            attr = "Read only, hidden, system, Volume_ID"
+            print("Attribute:",attr)
         else:
             attr = int(attr)
             if attr % 20 < attr:
@@ -497,7 +500,7 @@ def longEntry(byte,computation):
     
 
 def main():
-    byte = read("memoria2.txt")
+    byte = read("FAT16.txt")
 
     jmpBoot, oemName, bytesPerSec, SecPerClus, rsvdSecCnt, numFAT, rootEntCnt, totalSec16, media, fatSz16, secPerTrk, numHeads, hiddSec, totSec32, fatSz32 = info(byte)    
 
