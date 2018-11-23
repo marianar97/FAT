@@ -1,5 +1,5 @@
 from math import ceil
-
+import sys
 
 def read(string):
     f = open(string, "r")
@@ -85,6 +85,7 @@ def info(byte):
         print("WARNING: numFAT is different than 2, some software programs and operating system may not work properly")
 
     # RootEntCnt
+    print("RootEntCnt", byte[18] + byte[17])
     rootEntCnt = int(byte[18] + byte[17], 16)
     print("RootEntCnt", rootEntCnt)
     if rootEntCnt == 0:
@@ -500,7 +501,17 @@ def longEntry(byte,computation):
     
 
 def main():
-    byte = read("FAT16.txt")
+    image = ""
+    try:
+        image = sys.argv[1]
+    except IndexError:
+        print("Usage: python3 fat.py <fat image>")
+        return 1
+    try:
+        byte = read(image)
+    except FileNotFoundError as e:
+        print("%s was not found" %image)
+        return 1
 
     jmpBoot, oemName, bytesPerSec, SecPerClus, rsvdSecCnt, numFAT, rootEntCnt, totalSec16, media, fatSz16, secPerTrk, numHeads, hiddSec, totSec32, fatSz32 = info(byte)    
 
