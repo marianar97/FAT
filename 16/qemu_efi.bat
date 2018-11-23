@@ -1,0 +1,2 @@
+@echo off
+"..\qemu-system-i386.exe" -m 256 -localtime -drive file=fysos.img,format=raw,if=ide,media=disk,index=0 -drive if=pflash,format=raw,unit=0,readonly,file=OVMF_CODE-pure-efi.fd -drive if=pflash,format=raw,unit=1,file=OVMF_VARS-pure-efi.fd -serial file:serial.txt -vga std -net none

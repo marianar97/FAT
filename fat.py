@@ -34,13 +34,12 @@ def info(byte):
     else:
         jmpBoot = "ERROR: JmpBoot does not match"
         print(jmpBoot)
-        return 1
 
     # OEMName
     oemName = ""
     for i in range(3, 11):
         oemName += byte[i]
-    oemName = bytes.fromhex(oemName).decode('utf-8')
+    oemName = bytes.fromhex(oemName).decode('latin-1')
     print("OEMName", oemName)
 
     # BytesPerSec
@@ -51,7 +50,7 @@ def info(byte):
     print("BytesPerSec", bytesPerSec)
     if (bytesPerSec not in [512, 1024, 2048, 4096]):
         print("ERROR: bytesPerSec is not 512 or 1024 or 2048 or 4096")
-        return 1
+        
 
     # SecPerClus
     SecPerClus = int(byte[13], 16)
@@ -92,10 +91,10 @@ def info(byte):
         fatType = "FAT32"
     elif bytesPerSec % (rootEntCnt * 32) != 0:
         print("ERROR: RootEntCnt does not match")
-        return 1
+        
 
     # TotalSec16
-    totalSec16 = int(byte[20] + byte[19])
+    totalSec16 = int(byte[20] + byte[19],16)
     print("totalSec16", totalSec16)
 
     # media
@@ -245,15 +244,22 @@ def structureFAT16(byte):
     print("bootSig", bootSig)
 
     # volID
-    volID = "".join(byte[39:43])
+    volID = ""
+    for i in range(39,43):
+        volID += byte[i]
     print("VolID", volID)
 
     # volLab
-    volLab = "".join(byte[43:54])
+    volLab = ""
+    for i in range(43,54):
+        volLab += byte[i]
     print("VolLab", volLab)
 
     # FilSysType
-    fileSysType = "".join(byte[54:62])
+    fileSysType = ""
+    for i in range(54,62):
+        fileSysType += byte[i]
+
     fileSysType = bytes.fromhex(fileSysType).decode('utf-8')
     print("fileSysType", fileSysType)
 
@@ -313,7 +319,19 @@ def root(rootEntCnt, bytesPerSec, fatSz16, fatSz32, rsvdSecCnt, numFAT, totalSec
                 print()
         except KeyError:
             print("All files were listed")
-    
+    elif typeFAT == "FAT16" or typeFAT == "FAT12":
+        computation = rsvdSecCnt * bytesPerSec + (numFAT * fatSz16 * bytesPerSec)
+        # print("rsvdSecCnt: %d numFAT: %d, fatSz: %d" %(rsvdSecCnt,numFAT,fatSz16))
+        # print("computation",computation)
+        # print("byte in computation",byte[computation])
+        try:
+            while (byte[computation + 32] != "00"):
+                shortEntry(byte,computation,0)
+                computation+=32
+                print()
+        except KeyError:
+            print("All files were listed")
+        
 
 def shortEntry(byte,computation,isLong):
     
@@ -329,7 +347,7 @@ def shortEntry(byte,computation,isLong):
             else:
                 name += byte[i]
 
-        name = bytes.fromhex(name).decode('utf-8')
+        name = bytes.fromhex(name).decode('latin-1')
 
         if deletedFile and (name[7:].replace(" ", "")) not in ["", " "]:
             name = name[0:7] + "." + name[7:]
@@ -480,11 +498,10 @@ def longEntry(byte,computation):
 
 def main():
     byte = read("memoria2.txt")
-    # print(byte)
 
-    jmpBoot, oemName, bytesPerSec, SecPerClus, rsvdSecCnt, numFAT, rootEntCnt, totalSec16, media, fatSz16, secPerTrk, numHeads, hiddSec, totSec32, fatSz32 = info(
-        byte)
+    jmpBoot, oemName, bytesPerSec, SecPerClus, rsvdSecCnt, numFAT, rootEntCnt, totalSec16, media, fatSz16, secPerTrk, numHeads, hiddSec, totSec32, fatSz32 = info(byte)    
 
+    
     if fatSz32 != 0:
         extFlags, fsVer, rootClus, fsInfo, bkBootSec, reserved, drvNum, reserved1, bootSig, volID, volLab, fileSysType = structureFAT32(
             byte)
@@ -492,7 +509,7 @@ def main():
         drvNum, reserved1, bootSig, volID, volLab, fileSysType = structureFAT16(byte)
 
     root(rootEntCnt, bytesPerSec, fatSz16, fatSz32, rsvdSecCnt, numFAT, totalSec16, totSec32, SecPerClus, byte)
-
+    
 
 main()
 

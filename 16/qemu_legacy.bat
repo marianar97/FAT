@@ -1,0 +1,2 @@
+@echo off
+"..\qemu-system-i386w.exe" -m 256 -drive file=a.img,format=raw,if=floppy,index=0 -localtime -parallel file:para.txt -drive file=fysos.img,format=raw,if=ide,media=disk,index=0 -boot c -vga std -d guest_errors
